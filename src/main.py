@@ -130,13 +130,13 @@ class AnyQRApp(QMainWindow):
         self.fill_color = "black"
         self.back_color = "white"
 
-        self.btn_fg_color = QPushButton()
-        self.btn_bg_color = QPushButton()
-        self.btn_fg_color.clicked.connect(self.choose_fg_color)
-        self.btn_bg_color.clicked.connect(self.choose_bg_color)
+        self.btn_set_fg = QPushButton()
+        self.btn_set_bg = QPushButton()
+        self.btn_set_fg.clicked.connect(self.choose_fg_color)
+        self.btn_set_bg.clicked.connect(self.choose_bg_color)
 
-        color_layout.addWidget(self.btn_fg_color)
-        color_layout.addWidget(self.btn_bg_color)
+        color_layout.addWidget(self.btn_set_fg)
+        color_layout.addWidget(self.btn_set_bg)
         gen_layout.addLayout(color_layout)
 
         self.qr_display = QLabel()
