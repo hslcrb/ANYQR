@@ -1,7 +1,8 @@
 import io
 from PIL import Image
 import qrcode
-from pyzbar.pyzbar import decode
+import cv2
+import numpy as np
 import re
 
 class QRProcessor:
@@ -24,12 +25,19 @@ class QRProcessor:
     def decode_qr(image: Image.Image) -> list[str]:
         """Scans the image for QR codes and returns a list of decoded strings."""
         try:
-            # pyzbar can work directly with PIL images
-            decoded_objects = decode(image)
+            # Convert PIL image to OpenCV format (BGR)
+            open_cv_image = np.array(image.convert('RGB'))
+            open_cv_image = open_cv_image[:, :, ::-1].copy()
+            
+            # Use OpenCV's built-in QR Code detector
+            detector = cv2.QRCodeDetector()
+            retval, decoded_info, points, _ = detector.detectAndDecodeMulti(open_cv_image)
+            
             results = []
-            for obj in decoded_objects:
-                if obj.type == 'QRCODE':
-                    results.append(obj.data.decode("utf-8"))
+            if retval:
+                for text in decoded_info:
+                    if text: # Sometimes it returns empty strings for partial matches
+                        results.append(text)
             return results
         except Exception as e:
             print(f"Error decoding QR: {e}")
