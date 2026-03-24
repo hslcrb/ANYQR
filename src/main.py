@@ -3,65 +3,18 @@ import os
 import webbrowser
 from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, 
                              QPushButton, QLabel, QLineEdit, QTabWidget, QTextEdit, 
-                             QFileDialog, QMessageBox, QFrame, QSplitter, QColorDialog, QListWidget)
+                             QFileDialog, QMessageBox, QListWidget, QComboBox, QColorDialog)
 from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtGui import QPixmap, QImage, QKeySequence, QShortcut, QClipboard, QScreen
 from PIL import ImageQt, Image
 from qr_processor import QRProcessor
-
-FRUTIGER_AERO_STYLE = """
-QMainWindow {
-    background: qlineargradient(x1: 0, y1: 0, x2: 1, y2: 1, stop: 0 #d4f0ff, stop: 1 #ffffff);
-}
-QTabWidget::pane {
-    border: 1px solid #78c5ef;
-    background: rgba(255, 255, 255, 0.7);
-    border-radius: 12px;
-}
-QTabBar::tab {
-    background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 #e6f7ff, stop: 1 #b3e6ff);
-    border: 1px solid #78c5ef;
-    border-radius: 6px;
-    padding: 10px 20px;
-    margin-right: 4px;
-    margin-bottom: -1px;
-    color: #005a96;
-    font-weight: bold;
-}
-QTabBar::tab:selected, QTabBar::tab:hover {
-    background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 #ffffff, stop: 1 #cceeff);
-}
-QPushButton {
-    background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 #68c7ff, stop: 0.5 #009cf1, stop: 0.51 #0087d8, stop: 1 #009cf1);
-    border: 1px solid #005a96;
-    border-radius: 15px;
-    padding: 10px 20px;
-    color: white;
-    font-size: 14px;
-    font-weight: bold;
-}
-QPushButton:hover {
-    background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 #aee5ff, stop: 0.5 #27aff7, stop: 0.51 #19a1e8, stop: 1 #27aff7);
-}
-QLineEdit, QTextEdit, QListWidget {
-    border: 2px solid #a3dcff;
-    border-radius: 8px;
-    padding: 6px;
-    background-color: rgba(255, 255, 255, 0.85);
-    selection-background-color: #009cf1;
-}
-QLabel {
-    color: #1a4d80;
-    font-size: 14px;
-    font-weight: bold;
-}
-"""
+from styles import THEMES
+from translations import TRANSLATIONS
 
 class DropLabel(QLabel):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.setText("🌿 Drag and Drop Image Here\nor Paste (Ctrl+V) 🌿")
         self.setStyleSheet("""
             QLabel {
                 border: 2px dashed #009cf1;
@@ -101,12 +54,11 @@ class DropLabel(QLabel):
 class AnyQRApp(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("AnyQR - Super QR App (Frutiger Aero)")
+        self.lang = "ko"
+        self.current_theme = "Frutiger Aero"
+        self.history = []
+
         self.resize(850, 650)
-        self.setStyleSheet(FRUTIGER_AERO_STYLE)
-
-        self.history = [] # List to track scanned/generated items
-
         self.central_widget = QWidget()
         self.setCentralWidget(self.central_widget)
         self.layout = QVBoxLayout(self.central_widget)
@@ -117,9 +69,17 @@ class AnyQRApp(QMainWindow):
         self.setup_scan_tab()
         self.setup_generate_tab()
         self.setup_history_tab()
+        self.setup_settings_tab()
         
         self.paste_shortcut = QShortcut(QKeySequence("Ctrl+V"), self)
         self.paste_shortcut.activated.connect(self.handle_paste)
+
+        self.apply_theme()
+        self.update_texts()
+
+    @property
+    def t(self):
+        return TRANSLATIONS[self.lang]
 
     def setup_scan_tab(self):
         scan_tab = QWidget()
@@ -130,13 +90,13 @@ class AnyQRApp(QMainWindow):
         scan_layout.addWidget(self.drop_label, stretch=2)
 
         btn_layout = QHBoxLayout()
-        self.btn_load_file = QPushButton("📂 Load File")
+        self.btn_load_file = QPushButton()
         self.btn_load_file.clicked.connect(self.load_file_dialog)
         
-        self.btn_paste = QPushButton("📋 Paste Clipboard")
+        self.btn_paste = QPushButton()
         self.btn_paste.clicked.connect(self.handle_paste)
 
-        self.btn_screen_capture = QPushButton("🎥 Capture Screen")
+        self.btn_screen_capture = QPushButton()
         self.btn_screen_capture.clicked.connect(self.capture_screen)
 
         btn_layout.addWidget(self.btn_load_file)
@@ -144,12 +104,13 @@ class AnyQRApp(QMainWindow):
         btn_layout.addWidget(self.btn_screen_capture)
         scan_layout.addLayout(btn_layout)
 
-        scan_layout.addWidget(QLabel("<b>🔮 Extracted Content:</b>"))
+        self.lbl_extracted = QLabel()
+        scan_layout.addWidget(self.lbl_extracted)
         self.scan_result_text = QTextEdit()
         self.scan_result_text.setReadOnly(True)
         scan_layout.addWidget(self.scan_result_text, stretch=1)
 
-        self.tabs.addTab(scan_tab, "🔍 Scan QR")
+        self.tabs.addTab(scan_tab, "")
 
     def setup_generate_tab(self):
         gen_tab = QWidget()
@@ -157,9 +118,8 @@ class AnyQRApp(QMainWindow):
 
         input_layout = QHBoxLayout()
         self.gen_input = QLineEdit()
-        self.gen_input.setPlaceholderText("Enter text or URL to generate QR code...")
         
-        self.btn_generate = QPushButton("✨ Generate")
+        self.btn_generate = QPushButton()
         self.btn_generate.clicked.connect(self.generate_qr)
         
         input_layout.addWidget(self.gen_input)
@@ -170,8 +130,8 @@ class AnyQRApp(QMainWindow):
         self.fill_color = "black"
         self.back_color = "white"
 
-        self.btn_fg_color = QPushButton("🎨 Set QR Color (Black)")
-        self.btn_bg_color = QPushButton("🎨 Set BG Color (White)")
+        self.btn_fg_color = QPushButton()
+        self.btn_bg_color = QPushButton()
         self.btn_fg_color.clicked.connect(self.choose_fg_color)
         self.btn_bg_color.clicked.connect(self.choose_bg_color)
 
@@ -181,15 +141,15 @@ class AnyQRApp(QMainWindow):
 
         self.qr_display = QLabel()
         self.qr_display.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.qr_display.setStyleSheet("background-color: #FAFAFA; border: 2px dashed #a3dcff; border-radius: 12px;")
+        self.qr_display.setStyleSheet("background-color: transparent; border: 2px dashed #a3dcff; border-radius: 12px;")
         gen_layout.addWidget(self.qr_display, stretch=1)
 
-        self.btn_save_qr = QPushButton("💾 Save QR Code")
+        self.btn_save_qr = QPushButton()
         self.btn_save_qr.clicked.connect(self.save_qr)
         self.btn_save_qr.setEnabled(False)
         gen_layout.addWidget(self.btn_save_qr)
 
-        self.tabs.addTab(gen_tab, "✏️ Generate QR")
+        self.tabs.addTab(gen_tab, "")
         self.current_generated_img = None
 
     def setup_history_tab(self):
@@ -197,14 +157,101 @@ class AnyQRApp(QMainWindow):
         hist_layout = QVBoxLayout(hist_tab)
         
         self.history_list = QListWidget()
-        hist_layout.addWidget(QLabel("<b>📜 Activity History:</b>"))
+        self.lbl_history = QLabel()
+        hist_layout.addWidget(self.lbl_history)
         hist_layout.addWidget(self.history_list)
 
-        self.btn_export_history = QPushButton("📄 Export History to txt")
+        self.btn_export_history = QPushButton()
         self.btn_export_history.clicked.connect(self.export_history)
         hist_layout.addWidget(self.btn_export_history)
 
-        self.tabs.addTab(hist_tab, "📜 History")
+        self.tabs.addTab(hist_tab, "")
+
+    def setup_settings_tab(self):
+        set_tab = QWidget()
+        set_layout = QVBoxLayout(set_tab)
+
+        self.lbl_settings = QLabel()
+        set_layout.addWidget(self.lbl_settings)
+
+        # Language selection
+        lang_layout = QHBoxLayout()
+        self.lbl_lang = QLabel()
+        self.combo_lang = QComboBox()
+        self.combo_lang.addItems(["한국어 (ko)", "English (en)"])
+        self.combo_lang.currentIndexChanged.connect(self.change_language)
+        lang_layout.addWidget(self.lbl_lang)
+        lang_layout.addWidget(self.combo_lang)
+        lang_layout.addStretch()
+
+        # Theme selection
+        theme_layout = QHBoxLayout()
+        self.lbl_theme = QLabel()
+        self.combo_theme = QComboBox()
+        self.combo_theme.addItems(["Frutiger Aero", "Light Minimal", "Dark Minimal"])
+        self.combo_theme.currentIndexChanged.connect(self.change_theme)
+        theme_layout.addWidget(self.lbl_theme)
+        theme_layout.addWidget(self.combo_theme)
+        theme_layout.addStretch()
+
+        set_layout.addLayout(lang_layout)
+        set_layout.addLayout(theme_layout)
+        set_layout.addStretch()
+
+        self.tabs.addTab(set_tab, "")
+
+    def change_language(self, index):
+        if index == 0:
+            self.lang = "ko"
+        else:
+            self.lang = "en"
+        self.update_texts()
+
+    def change_theme(self, index):
+        self.current_theme = self.combo_theme.currentText()
+        self.apply_theme()
+
+    def apply_theme(self):
+        style = THEMES.get(self.current_theme, THEMES["Frutiger Aero"])
+        self.setStyleSheet(style)
+        
+        # Adjust specific drop label colors based on theme if needed
+        if "Dark" in self.current_theme:
+            self.drop_label.setStyleSheet("border: 2px dashed #555; border-radius: 15px; color: #aaa; font-size: 18px; padding: 20px;")
+            self.qr_display.setStyleSheet("background-color: transparent; border: 2px dashed #555; border-radius: 12px;")
+        elif "Light" in self.current_theme:
+            self.drop_label.setStyleSheet("border: 2px dashed #ccc; border-radius: 15px; color: #555; font-size: 18px; padding: 20px;")
+            self.qr_display.setStyleSheet("background-color: transparent; border: 2px dashed #ccc; border-radius: 12px;")
+        else:
+            self.drop_label.setStyleSheet("border: 2px dashed #009cf1; border-radius: 15px; background-color: rgba(255, 255, 255, 0.6); color: #005a96; font-size: 18px; padding: 20px;")
+            self.qr_display.setStyleSheet("background-color: transparent; border: 2px dashed #a3dcff; border-radius: 12px;")
+
+    def update_texts(self):
+        t = self.t
+        self.setWindowTitle(t["app_title"])
+        self.tabs.setTabText(0, t["tab_scan"])
+        self.tabs.setTabText(1, t["tab_gen"])
+        self.tabs.setTabText(2, t["tab_hist"])
+        self.tabs.setTabText(3, t["tab_settings"])
+
+        self.drop_label.setText(t["drop_text"])
+        self.btn_load_file.setText(t["btn_load_file"])
+        self.btn_paste.setText(t["btn_paste"])
+        self.btn_screen_capture.setText(t["btn_capture"])
+        self.lbl_extracted.setText(t["lbl_extracted"])
+
+        self.gen_input.setPlaceholderText(t["gen_placeholder"])
+        self.btn_generate.setText(t["btn_gen"])
+        self.btn_set_fg.setText(f'{t["btn_set_fg"]} ({self.fill_color})')
+        self.btn_set_bg.setText(f'{t["btn_set_bg"]} ({self.back_color})')
+        self.btn_save_qr.setText(t["btn_save_qr"])
+
+        self.lbl_history.setText(t["lbl_history"])
+        self.btn_export_history.setText(t["btn_export_hist"])
+
+        self.lbl_settings.setText(t["lbl_settings"])
+        self.lbl_lang.setText(t["lbl_language"])
+        self.lbl_theme.setText(t["lbl_theme"])
 
     def add_history(self, action, text):
         entry = f"[{action}] {text}"
@@ -215,13 +262,13 @@ class AnyQRApp(QMainWindow):
         color = QColorDialog.getColor()
         if color.isValid():
             self.fill_color = color.name()
-            self.btn_fg_color.setText(f"🎨 Set QR Color ({self.fill_color})")
+            self.btn_set_fg.setText(f'{self.t["btn_set_fg"]} ({self.fill_color})')
 
     def choose_bg_color(self):
         color = QColorDialog.getColor()
         if color.isValid():
             self.back_color = color.name()
-            self.btn_bg_color.setText(f"🎨 Set BG Color ({self.back_color})")
+            self.btn_set_bg.setText(f'{self.t["btn_set_bg"]} ({self.back_color})')
 
     def handle_paste(self):
         clipboard = QApplication.clipboard()
@@ -235,24 +282,21 @@ class AnyQRApp(QMainWindow):
             if urls:
                 self.process_image_file(urls[0].toLocalFile())
         else:
-            QMessageBox.information(self, "No Image", "There is no image in the clipboard.")
+            QMessageBox.information(self, self.t["no_image_title"], self.t["no_image_msg"])
 
     def load_file_dialog(self):
-        file_path, _ = QFileDialog.getOpenFileName(
-            self, "Open Image File", "", "Images (*.png *.jpg *.jpeg *.bmp *.gif)"
-        )
+        file_path, _ = QFileDialog.getOpenFileName(self, "Open Image File", "", "Images (*.png *.jpg *.jpeg *.bmp *.gif)")
         if file_path:
             self.process_image_file(file_path)
 
     def capture_screen(self):
-        self.hide() # Hide window briefly
+        self.hide()
         QTimer.singleShot(500, self.do_capture)
 
     def do_capture(self):
         screen = QApplication.primaryScreen()
         pixmap = screen.grabWindow(0)
-        self.show() # Show immediately
-        
+        self.show()
         qimage = pixmap.toImage()
         self.process_qimage(qimage)
 
@@ -266,7 +310,6 @@ class AnyQRApp(QMainWindow):
             QMessageBox.warning(self, "Error", f"Failed to load image: {e}")
 
     def process_qimage(self, qimage: QImage):
-        # Convert QImage to pure PIL Image properly handling formats
         pil_img = ImageQt.fromqimage(qimage)
         if pil_img.mode != "RGB":
             pil_img = pil_img.convert("RGB")
@@ -279,21 +322,29 @@ class AnyQRApp(QMainWindow):
         self.tabs.setCurrentIndex(0) 
         results = QRProcessor.decode_qr(pil_img)
         
+        t = self.t
         if not results:
-            self.scan_result_text.setText("🍃 No QR codes found in the image.")
-            self.scan_result_text.setStyleSheet("color: #7b1fa2;")
+            self.scan_result_text.setText(t["no_qr_found"])
+            if "Dark" in self.current_theme:
+                self.scan_result_text.setStyleSheet("color: #ffaaaa;")
+            else:
+                self.scan_result_text.setStyleSheet("color: #d32f2f;")
             return
 
-        self.scan_result_text.setStyleSheet("color: #005a96;")
+        if "Dark" in self.current_theme:
+            self.scan_result_text.setStyleSheet("color: #aaddff;")
+        else:
+            self.scan_result_text.setStyleSheet("color: #005a96;")
+            
         output = ""
         for i, text in enumerate(results):
-            output += f"--- 🌟 QR Code {i+1} ---\n{text}\n\n"
+            output += t["qr_detected"].format(num=i+1, text=text)
             self.add_history("SCANNED", text)
             
             if i == 0 and QRProcessor.is_url(text):
                 reply = QMessageBox.question(
-                    self, 'URL Detected', 
-                    f"A URL was detected:\n\n{text}\n\nDo you want to open it?",
+                    self, t["url_detected_title"], 
+                    t["url_detected_msg"].format(text=text),
                     QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No, 
                     QMessageBox.StandardButton.Yes
                 )
@@ -304,8 +355,9 @@ class AnyQRApp(QMainWindow):
 
     def generate_qr(self):
         text = self.gen_input.text().strip()
+        t = self.t
         if not text:
-            QMessageBox.warning(self, "Input Required", "Please enter some text or URL.")
+            QMessageBox.warning(self, t["input_required_title"], t["input_required_msg"])
             return
 
         pil_img = QRProcessor.generate_qr(text, fill_color=self.fill_color, back_color=self.back_color)
@@ -322,26 +374,24 @@ class AnyQRApp(QMainWindow):
         if not self.current_generated_img:
             return
         
-        file_path, _ = QFileDialog.getSaveFileName(
-            self, "Save QR Code", "qrcode.png", "PNG Image (*.png);;All Files (*)"
-        )
+        t = self.t
+        file_path, _ = QFileDialog.getSaveFileName(self, t["btn_save_qr"], "qrcode.png", "PNG Image (*.png);;All Files (*)")
         if file_path:
             self.current_generated_img.save(file_path)
-            QMessageBox.information(self, "Success", f"QR code saved to {os.path.basename(file_path)}")
+            QMessageBox.information(self, t["save_success_title"], t["save_success_msg"].format(file=os.path.basename(file_path)))
 
     def export_history(self):
+        t = self.t
         if not self.history:
-            QMessageBox.information(self, "Empty", "No history to export.")
+            QMessageBox.information(self, t["empty_hist_title"], t["empty_hist_msg"])
             return
 
-        file_path, _ = QFileDialog.getSaveFileName(
-            self, "Export History", "qr_history.txt", "Text Files (*.txt);;All Files (*)"
-        )
+        file_path, _ = QFileDialog.getSaveFileName(self, t["btn_export_hist"], "qr_history.txt", "Text Files (*.txt);;All Files (*)")
         if file_path:
             with open(file_path, 'w', encoding='utf-8') as f:
                 for item in self.history:
                     f.write(item + '\n')
-            QMessageBox.information(self, "Success", "History exported successfully!")
+            QMessageBox.information(self, t["export_success_title"], t["export_success_msg"])
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
