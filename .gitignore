@@ -1,4 +1,4 @@
-# Byte-compiled / optimized / DLL files
+byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
 *$py.class
@@ -41,3 +41,7 @@ qr_history.txt
 .vscode/
 *.swp
 *.swo
+
+# Explicitly KEEP .spec files
+!*.spec
+!AnyQR.spec
