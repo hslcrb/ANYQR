@@ -1,3 +1,7 @@
+# Set encoding to UTF-8 to prevent broken Korean characters in git commands
+$OutputEncoding = [System.Text.Encoding]::UTF8
+[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+
 Write-Host "Starting Pyinstaller build..."
 pyinstaller --onefile --windowed --name AnyQR src\main.py -y
 
