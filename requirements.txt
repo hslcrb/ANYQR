@@ -3,3 +3,4 @@ qrcode>=7.4.2
 pyzbar>=0.1.9
 Pillow>=10.2.0
 opencv-python>=4.9.0
+lxml

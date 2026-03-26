@@ -1,6 +1,7 @@
 import sys
 import os
 import webbrowser
+from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, 
                              QPushButton, QLabel, QLineEdit, QTabWidget, QTextEdit, 
                              QFileDialog, QMessageBox, QListWidget, QComboBox, QColorDialog,
                              QCheckBox)
