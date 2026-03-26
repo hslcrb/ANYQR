@@ -267,15 +267,21 @@ class AnyQRApp(QMainWindow):
         self.history_list.addItem(entry)
 
     def choose_fg_color(self):
-        color = QColorDialog.getColor()
+        color = QColorDialog.getColor(
+            initial=Qt.GlobalColor.black,
+            options=QColorDialog.ColorDialogOption.ShowAlphaChannel
+        )
         if color.isValid():
-            self.fill_color = color.name()
+            self.fill_color = color.getRgb() # Returns (r, g, b, a)
             self.btn_set_fg.setText(f'{self.t["btn_set_fg"]} ({self.fill_color})')
 
     def choose_bg_color(self):
-        color = QColorDialog.getColor()
+        color = QColorDialog.getColor(
+            initial=Qt.GlobalColor.white,
+            options=QColorDialog.ColorDialogOption.ShowAlphaChannel
+        )
         if color.isValid():
-            self.back_color = color.name()
+            self.back_color = color.getRgb()
             self.btn_set_bg.setText(f'{self.t["btn_set_bg"]} ({self.back_color})')
 
     def handle_paste(self):
