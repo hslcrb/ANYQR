@@ -1,9 +1,9 @@
 import sys
 import os
 import webbrowser
-from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, 
                              QPushButton, QLabel, QLineEdit, QTabWidget, QTextEdit, 
-                             QFileDialog, QMessageBox, QListWidget, QComboBox, QColorDialog)
+                             QFileDialog, QMessageBox, QListWidget, QComboBox, QColorDialog,
+                             QCheckBox)
 from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtGui import QPixmap, QImage, QKeySequence, QShortcut, QClipboard, QScreen
 from PIL import ImageQt, Image
@@ -137,6 +137,8 @@ class AnyQRApp(QMainWindow):
 
         color_layout.addWidget(self.btn_set_fg)
         color_layout.addWidget(self.btn_set_bg)
+        self.chk_transparent = QCheckBox()
+        color_layout.addWidget(self.chk_transparent)
         gen_layout.addLayout(color_layout)
 
         self.qr_display = QLabel()
@@ -248,6 +250,7 @@ class AnyQRApp(QMainWindow):
         self.btn_generate.setText(t["btn_gen"])
         self.btn_set_fg.setText(f'{t["btn_set_fg"]} ({self.fill_color})')
         self.btn_set_bg.setText(f'{t["btn_set_bg"]} ({self.back_color})')
+        self.chk_transparent.setText(t["chk_transparent"])
         self.btn_save_qr.setText(t["btn_save_qr"])
 
         self.lbl_history.setText(t["lbl_history"])
@@ -364,9 +367,11 @@ class AnyQRApp(QMainWindow):
             QMessageBox.warning(self, t["input_required_title"], t["input_required_msg"])
             return
 
-        pil_img = QRProcessor.generate_qr(text, fill_color=self.fill_color, back_color=self.back_color)
+        back = "transparent" if self.chk_transparent.isChecked() else self.back_color
+        pil_img = QRProcessor.generate_qr(text, fill_color=self.fill_color, back_color=back)
         self.current_generated_img = pil_img
         
+        # PIL to QImage conversion for display (maintains alpha)
         qimage = ImageQt.ImageQt(pil_img)
         pixmap = QPixmap.fromImage(qimage).scaled(400, 400, Qt.AspectRatioMode.KeepAspectRatio)
         self.qr_display.setPixmap(pixmap)
@@ -379,9 +384,15 @@ class AnyQRApp(QMainWindow):
             return
         
         t = self.t
-        file_path, _ = QFileDialog.getSaveFileName(self, t["btn_save_qr"], "qrcode.png", "PNG Image (*.png);;All Files (*)")
+        t = self.t
+        file_path, _ = QFileDialog.getSaveFileName(self, t["btn_save_qr"], "qrcode.png", "PNG Image (*.png);;SVG Vector (*.svg);;All Files (*)")
         if file_path:
-            self.current_generated_img.save(file_path)
+            if file_path.lower().endswith('.svg'):
+                svg_data = QRProcessor.generate_qr_svg(self.gen_input.text().strip())
+                with open(file_path, 'w', encoding='utf-8') as f:
+                    f.write(svg_data)
+            else:
+                self.current_generated_img.save(file_path)
             QMessageBox.information(self, t["save_success_title"], t["save_success_msg"].format(file=os.path.basename(file_path)))
 
     def export_history(self):

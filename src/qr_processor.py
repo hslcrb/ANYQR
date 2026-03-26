@@ -1,6 +1,7 @@
 import io
 from PIL import Image
 import qrcode
+import qrcode.image.svg
 import cv2
 import numpy as np
 import re
@@ -8,7 +9,7 @@ import re
 class QRProcessor:
     @staticmethod
     def generate_qr(data: str, size: int = 10, border: int = 4, fill_color: str = "black", back_color: str = "white") -> Image.Image:
-        """Generates a QR code image from the provided text/URL."""
+        """Generates a QR code image from the provided text/URL with RGBA support."""
         qr = qrcode.QRCode(
             version=1,
             error_correction=qrcode.constants.ERROR_CORRECT_H,
@@ -17,9 +18,30 @@ class QRProcessor:
         )
         qr.add_data(data)
         qr.make(fit=True)
-        img = qr.make_image(fill_color=fill_color, back_color=back_color)
-        # Ensure it's in a standard format (RGB) for GUI compatibility
-        return img.convert("RGB")
+        
+        # Handle transparency
+        actual_back = back_color
+        if isinstance(back_color, str) and back_color.lower() == "transparent":
+            actual_back = (255, 255, 255, 0)
+            
+        img = qr.make_image(fill_color=fill_color, back_color=actual_back)
+        return img.convert("RGBA")
+
+    @staticmethod
+    def generate_qr_svg(data: str, size: int = 10, border: int = 4) -> str:
+        """Generates a QR code in SVG format (returns XML string)."""
+        qr = qrcode.QRCode(
+            version=1,
+            error_correction=qrcode.constants.ERROR_CORRECT_H,
+            box_size=size,
+            border=border,
+        )
+        qr.add_data(data)
+        qr.make(fit=True)
+        # Use SvgPathImage factory for a compact SVG
+        factory = qrcode.image.svg.SvgPathImage
+        img = qr.make_image(image_factory=factory)
+        return img.to_string(encoding='unicode')
 
     @staticmethod
     def decode_qr(image: Image.Image) -> list[str]:
