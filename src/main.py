@@ -188,7 +188,7 @@ class AnyQRApp(QMainWindow):
         theme_layout = QHBoxLayout()
         self.lbl_theme = QLabel()
         self.combo_theme = QComboBox()
-        self.combo_theme.addItems(["Frutiger Aero", "Light Minimal", "Dark Minimal"])
+        self.combo_theme.addItems(["Frutiger Aero", "Frutiger Aero Dark", "Light Minimal", "Dark Minimal"])
         self.combo_theme.currentIndexChanged.connect(self.change_theme)
         theme_layout.addWidget(self.lbl_theme)
         theme_layout.addWidget(self.combo_theme)
@@ -217,8 +217,12 @@ class AnyQRApp(QMainWindow):
         
         # Adjust specific drop label colors based on theme if needed
         if "Dark" in self.current_theme:
-            self.drop_label.setStyleSheet("border: 2px dashed #555; border-radius: 15px; color: #aaa; font-size: 18px; padding: 20px;")
-            self.qr_display.setStyleSheet("background-color: transparent; border: 2px dashed #555; border-radius: 12px;")
+            if "Frutiger" in self.current_theme:
+                self.drop_label.setStyleSheet("border: 2px dashed #009cf1; border-radius: 15px; background-color: rgba(0, 26, 51, 0.6); color: #80c4ff; font-size: 18px; padding: 20px;")
+                self.qr_display.setStyleSheet("background-color: transparent; border: 2px dashed #1a4d80; border-radius: 12px;")
+            else:
+                self.drop_label.setStyleSheet("border: 2px dashed #555; border-radius: 15px; color: #aaa; font-size: 18px; padding: 20px;")
+                self.qr_display.setStyleSheet("background-color: transparent; border: 2px dashed #555; border-radius: 12px;")
         elif "Light" in self.current_theme:
             self.drop_label.setStyleSheet("border: 2px dashed #ccc; border-radius: 15px; color: #555; font-size: 18px; padding: 20px;")
             self.qr_display.setStyleSheet("background-color: transparent; border: 2px dashed #ccc; border-radius: 12px;")

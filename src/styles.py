@@ -66,11 +66,64 @@ QTabBar::tab:selected { background: #252526; border-bottom: 2px solid #007aff; c
 QPushButton { background-color: #333; border: 1px solid #444; border-radius: 6px; padding: 8px 16px; color: #eee; font-weight: 500;}
 QPushButton:hover { background-color: #444; }
 QLineEdit, QTextEdit, QListWidget, QComboBox { border: 1px solid #444; border-radius: 6px; padding: 6px; background-color: #1e1e1e; color: #eee; }
-QLabel { color: #eee; font-size: 14px; }
+QLabel {
+    color: #eee; font-size: 14px;
+}
+"""
+
+FRUTIGER_AERO_DARK_STYLE = """
+QMainWindow {
+    background: qlineargradient(x1: 0, y1: 0, x2: 1, y2: 1, stop: 0 #001a33, stop: 1 #003366);
+}
+QTabWidget::pane {
+    border: 1px solid #1a4d80;
+    background: rgba(0, 26, 51, 0.7);
+    border-radius: 12px;
+}
+QTabBar::tab {
+    background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 #003366, stop: 1 #001a33);
+    border: 1px solid #1a4d80;
+    border-radius: 6px;
+    padding: 10px 20px;
+    margin-right: 4px;
+    margin-bottom: -1px;
+    color: #80c4ff;
+    font-weight: bold;
+}
+QTabBar::tab:selected, QTabBar::tab:hover {
+    background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 #004d99, stop: 1 #002b80);
+    color: #ffffff;
+}
+QPushButton {
+    background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 #009cf1, stop: 0.5 #007bbd, stop: 0.51 #006da8, stop: 1 #007bbd);
+    border: 1px solid #004d80;
+    border-radius: 15px;
+    padding: 10px 20px;
+    color: white;
+    font-size: 14px;
+    font-weight: bold;
+}
+QPushButton:hover {
+    background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 #27aff7, stop: 0.5 #0087d8, stop: 0.51 #007bbd, stop: 1 #0087d8);
+}
+QLineEdit, QTextEdit, QListWidget, QComboBox {
+    border: 2px solid #1a4d80;
+    border-radius: 8px;
+    padding: 6px;
+    background-color: rgba(0, 26, 51, 0.85);
+    selection-background-color: #009cf1;
+    color: #80c4ff;
+}
+QLabel {
+    color: #80c4ff;
+    font-size: 14px;
+    font-weight: bold;
+}
 """
 
 THEMES = {
     "Frutiger Aero": FRUTIGER_AERO_STYLE,
+    "Frutiger Aero Dark": FRUTIGER_AERO_DARK_STYLE,
     "Light Minimal": LIGHT_MINIMAL_STYLE,
     "Dark Minimal": DARK_MINIMAL_STYLE
 }
