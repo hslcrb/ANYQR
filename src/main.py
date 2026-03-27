@@ -660,9 +660,66 @@ class AnyQRApp(QMainWindow):
                     f.write(item + '\n')
             QMessageBox.information(self, t["export_success_title"], t["export_success_msg"])
 
+LONG_HELP = """
+AnyQR Advanced CLI - Version 1.7.1
+==================================
+
+Powerful QR code generation and scanning with full GUI/CLI parity.
+
+USAGE:
+  AnyQR.exe <Command> [Options]
+
+COMMANDS:
+  /help             Show this comprehensive help message.
+  /scan <path>      Scan an image file for QR codes.
+  /gen <text>       Generate a QR code for the given text.
+  /batch <path>     Batch generate QR codes from a text file (one line per QR).
+  /config <path>    Process an external JSON or XML configuration file.
+
+OPTIONS:
+  /output <path>    Define the output filename (PNG, SVG, or ZIP for batch).
+  /fill <color>     QR foreground color (e.g., black, #FF0000, "blue").
+  /back <color>     QR background color or 'transparent' (e.g., white, #FFFFFF00).
+  /svg              Export as high-quality SVG vector instead of PNG.
+
+EXAMPLES:
+  1. Scan a file:
+     AnyQR.exe /scan "./my_qr.png"
+
+  2. Generate a custom QR:
+     AnyQR.exe /gen "https://google.com" /output "google.png" /fill "blue" /back "#f0f0f0"
+
+  3. Generate a transparent SVG:
+     AnyQR.exe /gen "Secret data" /output "hidden.svg" /svg /back transparent
+
+  4. Batch generation (outputs a ZIP file):
+     AnyQR.exe /batch "./links.txt" /output "all_qrs.zip"
+
+  5. External Automation (JSON):
+     Run: AnyQR.exe /config "tasks.json"
+     JSON format:
+     {
+       "commands": [
+         {"action": "gen", "text": "Task1", "output": "1.png", "fill": "red"},
+         {"action": "scan", "path": "1.png"}
+       ]
+     }
+
+  6. External Automation (XML):
+     Run: AnyQR.exe /config "tasks.xml"
+     XML format:
+     <anyqr>
+       <command action="gen" text="TaskX" output="x.svg" svg="true" />
+     </anyqr>
+
+NOTES:
+- The GUI launches automatically if no CLI arguments are provided.
+- CLI output is standardized to English for better compatibility with logs and automation.
+"""
+
 def run_cli():
     # Use argparse with slash prefix support
-    parser = argparse.ArgumentParser(description="AnyQR Advanced CLI", prefix_chars='/')
+    parser = argparse.ArgumentParser(description="AnyQR Advanced CLI", prefix_chars='/', add_help=False)
     parser.add_argument("/scan", help="Scan image: /scan <path>")
     parser.add_argument("/gen", help="Generate QR: /gen <text>")
     parser.add_argument("/output", help="Output path")
@@ -673,15 +730,14 @@ def run_cli():
     parser.add_argument("/config", help="JSON/XML config file path")
     parser.add_argument("/help", action="store_true", help="Show this help")
     
-    # Pre-process argv to convert /cmd to /cmd=... for argparse if needed, 
-    # but argparse handles /cmd value fine if it's next arg.
     try:
         args, unknown = parser.parse_known_args()
     except SystemExit:
-        return True # Handled by argparse help
+        print(LONG_HELP)
+        return True
 
     if args.help:
-        parser.print_help()
+        print(LONG_HELP)
         return True
 
     def process_gen(text, output=None, fill="black", back="white", svg=False):
