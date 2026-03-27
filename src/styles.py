@@ -40,7 +40,7 @@ QLineEdit, QTextEdit, QListWidget, QComboBox {
     selection-background-color: #009cf1;
     color: #333;
 }
-QLabel {
+QLabel, QCheckBox {
     color: #1a4d80;
     font-size: 14px;
     font-weight: bold;
@@ -55,7 +55,7 @@ QTabBar::tab:selected { background: white; border-bottom: 2px solid #007aff; col
 QPushButton { background-color: #f0f0f0; border: 1px solid #ccc; border-radius: 6px; padding: 8px 16px; color: #333; font-weight: 500;}
 QPushButton:hover { background-color: #e4e4e4; }
 QLineEdit, QTextEdit, QListWidget, QComboBox { border: 1px solid #ccc; border-radius: 6px; padding: 6px; background-color: white; color: #333; }
-QLabel { color: #333; font-size: 14px; }
+QLabel, QCheckBox { color: #333; font-size: 14px; }
 """
 
 DARK_MINIMAL_STYLE = """
@@ -114,7 +114,7 @@ QLineEdit, QTextEdit, QListWidget, QComboBox {
     selection-background-color: #009cf1;
     color: #80c4ff;
 }
-QLabel {
+QLabel, QCheckBox {
     color: #80c4ff;
     font-size: 14px;
     font-weight: bold;
