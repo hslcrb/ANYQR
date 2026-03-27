@@ -45,17 +45,17 @@ class CustomTitleBar(QWidget):
         
         self.btn_min = QPushButton("－")
         self.btn_min.setObjectName("TitleButton")
+        self.btn_min.setFixedSize(45, 45)
         self.btn_min.clicked.connect(self.parent.showMinimized)
         
         self.btn_max = QPushButton("▢")
         self.btn_max.setObjectName("TitleButton")
+        self.btn_max.setFixedSize(45, 45)
         self.btn_max.clicked.connect(self.toggle_maximize)
         
         self.btn_close = QPushButton("✕")
         self.btn_close.setObjectName("CloseButton")
-        self.btn_close.setProperty("class", "TitleButton") # for secondary styling if needed
-        self.btn_close.setStyleSheet("QPushButton { background: transparent; border-radius: 4px; color: inherit; font-weight: bold; font-size: 14px; min-width: 40px; padding: 4px; }")
-        self.btn_close.setObjectName("CloseButton")
+        self.btn_close.setFixedSize(45, 45)
         self.btn_close.clicked.connect(self.parent.close)
         
         self.layout.addWidget(self.btn_min)
@@ -134,6 +134,7 @@ class AnyQRApp(QMainWindow):
         self.setWindowFlags(Qt.WindowType.FramelessWindowHint | Qt.WindowType.Window)
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
         
+        self.setMouseTracking(True)
         self.setup_ui()
         
         # Set Window Icon
@@ -141,9 +142,80 @@ class AnyQRApp(QMainWindow):
         if os.path.exists(icon_path):
             self.setWindowIcon(QIcon(icon_path))
         
+        self.resizing = False
+        self.resize_edge = None
+        self.margin = 8
+
         # Close Splash Screen if present
         if pyi_splash:
             pyi_splash.close()
+
+    def mousePressEvent(self, event):
+        if event.button() == Qt.MouseButton.LeftButton:
+            edge = self.get_edge(event.position().toPoint())
+            if edge:
+                self.resizing = True
+                self.resize_edge = edge
+                event.accept()
+
+    def mouseMoveEvent(self, event):
+        pos = event.position().toPoint()
+        if not self.resizing:
+            edge = self.get_edge(pos)
+            if edge == "left" or edge == "right": self.setCursor(Qt.CursorShape.SizeHorCursor)
+            elif edge == "top" or edge == "bottom": self.setCursor(Qt.CursorShape.SizeVerCursor)
+            elif edge == "top_left" or edge == "bottom_right": self.setCursor(Qt.CursorShape.SizeFDiagCursor)
+            elif edge == "top_right" or edge == "bottom_left": self.setCursor(Qt.CursorShape.SizeBDiagCursor)
+            else: self.setCursor(Qt.CursorShape.ArrowCursor)
+        else:
+            self.handle_resize(event.globalPosition().toPoint())
+            event.accept()
+
+    def mouseReleaseEvent(self, event):
+        self.resizing = False
+        self.setCursor(Qt.CursorShape.ArrowCursor)
+
+    def get_edge(self, pos):
+        rect = self.rect()
+        m = self.margin
+        x, y = pos.x(), pos.y()
+        w, h = rect.width(), rect.height()
+        
+        top = y < m
+        bottom = y > h - m
+        left = x < m
+        right = x > w - m
+        
+        if top and left: return "top_left"
+        if top and right: return "top_right"
+        if bottom and left: return "bottom_left"
+        if bottom and right: return "bottom_right"
+        if top: return "top"
+        if bottom: return "bottom"
+        if left: return "left"
+        if right: return "right"
+        return None
+
+    def handle_resize(self, global_pos):
+        if not self.resize_edge:
+            return
+        rect = self.geometry()
+        edge = self.resize_edge
+        
+        if "left" in edge:
+            new_width = rect.right() - global_pos.x()
+            if new_width > self.minimumWidth():
+                rect.setLeft(global_pos.x())
+        if "right" in edge:
+            rect.setRight(global_pos.x())
+        if "top" in edge:
+            new_height = rect.bottom() - global_pos.y()
+            if new_height > self.minimumHeight():
+                rect.setTop(global_pos.y())
+        if "bottom" in edge:
+            rect.setBottom(global_pos.y())
+            
+        self.setGeometry(rect)
 
     @property
     def t(self):
