@@ -1,16 +1,23 @@
 import sys
 import os
 import webbrowser
+import io
+import zipfile
 from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, 
                              QPushButton, QLabel, QLineEdit, QTabWidget, QTextEdit, 
                              QFileDialog, QMessageBox, QListWidget, QComboBox, QColorDialog,
                              QCheckBox)
 from PyQt6.QtCore import Qt, QTimer
-from PyQt6.QtGui import QPixmap, QImage, QKeySequence, QShortcut, QClipboard, QScreen
+from PyQt6.QtGui import QPixmap, QImage, QKeySequence, QShortcut, QClipboard, QScreen, QIcon
 from PIL import ImageQt, Image
 from qr_processor import QRProcessor
 from styles import THEMES
 from translations import TRANSLATIONS
+
+try:
+    import pyi_splash
+except ImportError:
+    pyi_splash = None
 
 class DropLabel(QLabel):
     def __init__(self, parent=None):
@@ -55,6 +62,22 @@ class DropLabel(QLabel):
 class AnyQRApp(QMainWindow):
     def __init__(self):
         super().__init__()
+        self.setup_ui()
+        
+        # Set Window Icon
+        icon_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "statics", "icon.ico")
+        if os.path.exists(icon_path):
+            self.setWindowIcon(QIcon(icon_path))
+        
+        # Close Splash Screen if present
+        if pyi_splash:
+            pyi_splash.close()
+
+    @property
+    def t(self):
+        return TRANSLATIONS[self.lang]
+
+    def setup_ui(self):
         self.lang = "ko"
         self.current_theme = "Frutiger Aero"
         self.history = []
@@ -69,6 +92,7 @@ class AnyQRApp(QMainWindow):
 
         self.setup_scan_tab()
         self.setup_generate_tab()
+        self.setup_batch_tab()
         self.setup_history_tab()
         self.setup_settings_tab()
         
@@ -155,6 +179,23 @@ class AnyQRApp(QMainWindow):
         self.tabs.addTab(gen_tab, "")
         self.current_generated_img = None
 
+    def setup_batch_tab(self):
+        batch_widget = QWidget()
+        batch_layout = QVBoxLayout(batch_widget)
+        
+        self.lbl_batch_info = QLabel()
+        self.lbl_batch_info.setWordWrap(True)
+        batch_layout.addWidget(self.lbl_batch_info)
+        
+        self.batch_input = QTextEdit()
+        batch_layout.addWidget(self.batch_input)
+        
+        self.btn_batch_generate = QPushButton()
+        self.btn_batch_generate.clicked.connect(self.generate_batch_qr)
+        batch_layout.addWidget(self.btn_batch_generate)
+        
+        self.tabs.addTab(batch_widget, "")
+
     def setup_history_tab(self):
         hist_tab = QWidget()
         hist_layout = QVBoxLayout(hist_tab)
@@ -238,8 +279,9 @@ class AnyQRApp(QMainWindow):
         self.setWindowTitle(t["app_title"])
         self.tabs.setTabText(0, t["tab_scan"])
         self.tabs.setTabText(1, t["tab_gen"])
-        self.tabs.setTabText(2, t["tab_hist"])
-        self.tabs.setTabText(3, t["tab_settings"])
+        self.tabs.setTabText(2, t["tab_batch"])
+        self.tabs.setTabText(3, t["tab_hist"])
+        self.tabs.setTabText(4, t["tab_settings"])
 
         self.drop_label.setText(t["drop_text"])
         self.btn_load_file.setText(t["btn_load_file"])
@@ -253,6 +295,9 @@ class AnyQRApp(QMainWindow):
         self.btn_set_bg.setText(f'{t["btn_set_bg"]} ({self.back_color})')
         self.chk_transparent.setText(t["chk_transparent"])
         self.btn_save_qr.setText(t["btn_save_qr"])
+
+        self.lbl_batch_info.setText(t["lbl_batch_info"])
+        self.btn_batch_generate.setText(t["btn_batch_gen"])
 
         self.lbl_history.setText(t["lbl_history"])
         self.btn_export_history.setText(t["btn_export_hist"])
@@ -401,6 +446,46 @@ class AnyQRApp(QMainWindow):
             else:
                 self.current_generated_img.save(file_path)
             QMessageBox.information(self, t["save_success_title"], t["save_success_msg"].format(file=os.path.basename(file_path)))
+
+    def generate_batch_qr(self):
+        t = self.t
+        text_data = self.batch_input.toPlainText().strip()
+        if not text_data:
+            QMessageBox.warning(self, t["input_required_title"], t["batch_empty_msg"])
+            return
+
+        lines = [line.strip() for line in text_data.split('\n') if line.strip()]
+        if not lines:
+            QMessageBox.warning(self, t["input_required_title"], t["batch_empty_msg"])
+            return
+
+        file_path, _ = QFileDialog.getSaveFileName(self, t["btn_batch_gen"], "batch_qrcodes.zip", t["save_zip_filter"])
+        if not file_path:
+            return
+
+        try:
+            zip_buffer = io.BytesIO()
+            with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
+                for idx, line in enumerate(lines):
+                    # For batch, we use current colors but maybe standard PNG for simplicity
+                    back = "transparent" if self.chk_transparent.isChecked() else self.back_color
+                    pil_img = QRProcessor.generate_qr(line, fill_color=self.fill_color, back_color=back)
+                    
+                    img_byte_arr = io.BytesIO()
+                    pil_img.save(img_byte_arr, format='PNG')
+                    zip_file.writestr(f"qr_{idx+1}.png", img_byte_arr.getvalue())
+            
+            with open(file_path, 'wb') as f:
+                f.write(zip_buffer.getvalue())
+            
+            QMessageBox.information(self, t["save_success_title"], t["batch_success_msg"].format(count=len(lines), file=os.path.basename(file_path)))
+            
+            # Record in history
+            for line in lines:
+                self.add_history("BATCH", line)
+                
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Batch generation failed: {str(e)}")
 
     def export_history(self):
         t = self.t
