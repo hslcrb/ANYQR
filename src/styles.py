@@ -61,9 +61,9 @@ QDialog { background-color: #d4f0ff; }
     border-radius: 4px; 
     color: white; 
     font-weight: bold; 
-    font-size: 14px; 
+    font-size: 20px; 
     min-width: 30px; 
-    padding: 4px;
+    padding: 2px;
 }
 #TitleButton:hover { background-color: rgba(255, 255, 255, 0.2); }
 #CloseButton:hover { background-color: #ff4d4d; }
@@ -82,7 +82,7 @@ QLabel, QCheckBox { color: #333; font-size: 14px; }
 QDialog { background-color: #f9f9f9; }
 #TitleBar { background-color: #f8f8f8; border-bottom: 1px solid #ccc; }
 #TitleLabel { color: #333; font-weight: 500; font-size: 14px; }
-#TitleButton { background: transparent; color: #333; border-radius: 4px; min-width: 30px; }
+#TitleButton { background: transparent; color: #333; border-radius: 4px; min-width: 30px; font-size: 20px; }
 #TitleButton:hover { background-color: #ddd; }
 """
 
@@ -99,7 +99,7 @@ QLabel, QCheckBox { color: #eee; font-size: 14px; }
 QDialog { background-color: #1e1e1e; }
 #TitleBar { background-color: #2d2d2d; border-bottom: 1px solid #444; }
 #TitleLabel { color: #eee; font-weight: 500; font-size: 14px; }
-#TitleButton { background: transparent; color: #eee; border-radius: 4px; min-width: 30px; }
+#TitleButton { background: transparent; color: #eee; border-radius: 4px; min-width: 30px; font-size: 20px; }
 #TitleButton:hover { background-color: #555; }
 """
 
@@ -165,9 +165,9 @@ QDialog { background-color: #001a33; }
     border-radius: 4px; 
     color: #80c4ff; 
     font-weight: bold; 
-    font-size: 14px; 
+    font-size: 20px; 
     min-width: 30px; 
-    padding: 4px;
+    padding: 2px;
 }
 #TitleButton:hover { background-color: rgba(128, 196, 255, 0.2); }
 #CloseButton:hover { background-color: #990000; color: white; }
