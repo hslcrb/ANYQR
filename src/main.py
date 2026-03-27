@@ -5,6 +5,8 @@ import io
 import zipfile
 import argparse
 import ctypes
+import json
+import xml.etree.ElementTree as ET
 from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, 
                              QPushButton, QLabel, QLineEdit, QTabWidget, QTextEdit, 
                              QFileDialog, QMessageBox, QListWidget, QComboBox, QColorDialog,
@@ -659,73 +661,104 @@ class AnyQRApp(QMainWindow):
             QMessageBox.information(self, t["export_success_title"], t["export_success_msg"])
 
 def run_cli():
-    parser = argparse.ArgumentParser(description="AnyQR CLI - Generate and Scan QR Codes")
-    parser.add_argument("--scan", help="Path to image file to scan for QR codes")
-    parser.add_argument("--gen", help="Text to generate a QR code for")
-    parser.add_argument("--output", help="Output file path (default: qrcode.png or batch.zip)")
-    parser.add_argument("--fill", default="black", help="Foreground color (default: black)")
-    parser.add_argument("--back", default="white", help="Background color or 'transparent' (default: white)")
-    parser.add_argument("--svg", action="store_true", help="Generate SVG instead of PNG")
-    parser.add_argument("--batch", help="Path to text file containing multiple lines for batch generation")
+    # Use argparse with slash prefix support
+    parser = argparse.ArgumentParser(description="AnyQR Advanced CLI", prefix_chars='/')
+    parser.add_argument("/scan", help="Scan image: /scan <path>")
+    parser.add_argument("/gen", help="Generate QR: /gen <text>")
+    parser.add_argument("/output", help="Output path")
+    parser.add_argument("/fill", default="black", help="Foreground color")
+    parser.add_argument("/back", default="white", help="Background color")
+    parser.add_argument("/svg", action="store_true", help="Generate SVG")
+    parser.add_argument("/batch", help="Batch file path")
+    parser.add_argument("/config", help="JSON/XML config file path")
+    parser.add_argument("/help", action="store_true", help="Show this help")
     
-    args = parser.parse_args()
-    
-    if args.scan:
+    # Pre-process argv to convert /cmd to /cmd=... for argparse if needed, 
+    # but argparse handles /cmd value fine if it's next arg.
+    try:
+        args, unknown = parser.parse_known_args()
+    except SystemExit:
+        return True # Handled by argparse help
+
+    if args.help:
+        parser.print_help()
+        return True
+
+    def process_gen(text, output=None, fill="black", back="white", svg=False):
+        out = output or ("qrcode.svg" if svg else "qrcode.png")
+        if svg:
+            svg_data = QRProcessor.generate_qr_svg(text)
+            with open(out, 'w', encoding='utf-8') as f:
+                f.write(svg_data)
+        else:
+            p_back = "transparent" if back.lower() == "transparent" else back
+            pil_img = QRProcessor.generate_qr(text, fill_color=fill, back_color=p_back)
+            pil_img.save(out)
+        print(f"Generated QR for '{text}' -> {out}")
+
+    def process_scan(path):
         try:
-            pil_img = Image.open(args.scan)
+            pil_img = Image.open(path)
             results = QRProcessor.decode_qr(pil_img)
             if results:
                 for idx, text in enumerate(results):
-                    print(f"[{idx+1}] {text}")
+                    print(f"Detected [{idx+1}]: {text}")
             else:
-                print("No QR code found in the image.")
+                print(f"No QR found in {path}")
         except Exception as e:
-            print(f"Error scanning image: {e}")
+            print(f"Scan failed: {e}")
+
+    if args.scan:
+        process_scan(args.scan)
         return True
 
     if args.gen:
-        output = args.output or ("qrcode.svg" if args.svg else "qrcode.png")
-        try:
-            if args.svg:
-                svg_data = QRProcessor.generate_qr_svg(args.gen)
-                with open(output, 'w', encoding='utf-8') as f:
-                    f.write(svg_data)
-            else:
-                if args.back.lower() == "transparent":
-                    back = "transparent"
-                else:
-                    back = args.back
-                pil_img = QRProcessor.generate_qr(args.gen, fill_color=args.fill, back_color=back)
-                pil_img.save(output)
-            print(f"QR code successfully saved to: {output}")
-        except Exception as e:
-            print(f"Error generating QR: {e}")
+        process_gen(args.gen, args.output, args.fill, args.back, args.svg)
         return True
 
     if args.batch:
-        output = args.output or "batch_qrcodes.zip"
+        out = args.output or "batch.zip"
         try:
             with open(args.batch, 'r', encoding='utf-8') as f:
-                lines = [line.strip() for line in f if line.strip()]
-            
-            if not lines:
-                print("Batch file is empty.")
-                return True
-                
+                lines = [l.strip() for l in f if l.strip()]
             zip_buffer = io.BytesIO()
-            with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
+            with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as z:
                 for idx, line in enumerate(lines):
-                    back = "transparent" if args.back.lower() == "transparent" else args.back
-                    pil_img = QRProcessor.generate_qr(line, fill_color=args.fill, back_color=back)
-                    img_byte_arr = io.BytesIO()
-                    pil_img.save(img_byte_arr, format='PNG')
-                    zip_file.writestr(f"qr_{idx+1}.png", img_byte_arr.getvalue())
-            
-            with open(output, 'wb') as f:
-                f.write(zip_buffer.getvalue())
-            print(f"Batch generation complete. {len(lines)} QR codes saved to: {output}")
+                    p_back = "transparent" if args.back.lower() == "transparent" else args.back
+                    pi = QRProcessor.generate_qr(line, fill_color=args.fill, back_color=p_back)
+                    buf = io.BytesIO()
+                    pi.save(buf, format='PNG')
+                    z.writestr(f"qr_{idx+1}.png", buf.getvalue())
+            with open(out, 'wb') as f: f.write(zip_buffer.getvalue())
+            print(f"Batch done: {len(lines)} items -> {out}")
+        except Exception as e: print(f"Batch failed: {e}")
+        return True
+
+    if args.config:
+        path = args.config
+        try:
+            if path.endswith('.json'):
+                with open(path, 'r', encoding='utf-8') as f:
+                    data = json.load(f)
+                    for cmd in data.get("commands", []):
+                        action = cmd.get("action")
+                        if action == "gen":
+                            process_gen(cmd.get("text"), cmd.get("output"), cmd.get("fill", "black"), cmd.get("back", "white"), cmd.get("svg", False))
+                        elif action == "scan":
+                            process_scan(cmd.get("path"))
+            elif path.endswith('.xml'):
+                tree = ET.parse(path)
+                root = tree.getroot()
+                for cmd in root.findall('command'):
+                    action = cmd.get('action')
+                    if action == "gen":
+                        process_gen(cmd.get('text'), cmd.get('output'), cmd.get('fill', "black"), cmd.get('back', "white"), cmd.get('svg', "false").lower() == "true")
+                    elif action == "scan":
+                        process_scan(cmd.get('path'))
+            else:
+                print("Unsupported config format. Use .json or .xml")
         except Exception as e:
-            print(f"Batch generation failed: {e}")
+            print(f"Config failed: {e}")
         return True
         
     return False
