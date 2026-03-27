@@ -45,6 +45,25 @@ QLabel, QCheckBox {
     font-size: 14px;
     font-weight: bold;
 }
+QDialog { background-color: #d4f0ff; }
+#TitleBar {
+    background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 rgba(0, 156, 241, 0.8), stop:1 rgba(0, 100, 200, 0.9));
+    border-top-left-radius: 10px;
+    border-top-right-radius: 10px;
+    border-bottom: 2px solid #005a96;
+}
+#TitleLabel { color: white; font-weight: bold; font-size: 14px; }
+#TitleButton { 
+    background: transparent; 
+    border-radius: 4px; 
+    color: white; 
+    font-weight: bold; 
+    font-size: 14px; 
+    min-width: 30px; 
+    padding: 4px;
+}
+#TitleButton:hover { background-color: rgba(255, 255, 255, 0.2); }
+#CloseButton:hover { background-color: #ff4d4d; }
 """
 
 LIGHT_MINIMAL_STYLE = """
@@ -56,6 +75,11 @@ QPushButton { background-color: #f0f0f0; border: 1px solid #ccc; border-radius: 
 QPushButton:hover { background-color: #e4e4e4; }
 QLineEdit, QTextEdit, QListWidget, QComboBox { border: 1px solid #ccc; border-radius: 6px; padding: 6px; background-color: white; color: #333; }
 QLabel, QCheckBox { color: #333; font-size: 14px; }
+QDialog { background-color: #f9f9f9; }
+#TitleBar { background-color: #f8f8f8; border-bottom: 1px solid #ccc; }
+#TitleLabel { color: #333; font-weight: 500; font-size: 14px; }
+#TitleButton { background: transparent; color: #333; border-radius: 4px; min-width: 30px; }
+#TitleButton:hover { background-color: #ddd; }
 """
 
 DARK_MINIMAL_STYLE = """
@@ -66,9 +90,12 @@ QTabBar::tab:selected { background: #252526; border-bottom: 2px solid #007aff; c
 QPushButton { background-color: #333; border: 1px solid #444; border-radius: 6px; padding: 8px 16px; color: #eee; font-weight: 500;}
 QPushButton:hover { background-color: #444; }
 QLineEdit, QTextEdit, QListWidget, QComboBox { border: 1px solid #444; border-radius: 6px; padding: 6px; background-color: #1e1e1e; color: #eee; }
-QLabel {
-    color: #eee; font-size: 14px;
-}
+QLabel, QCheckBox { color: #eee; font-size: 14px; }
+QDialog { background-color: #1e1e1e; }
+#TitleBar { background-color: #2d2d2d; border-bottom: 1px solid #444; }
+#TitleLabel { color: #eee; font-weight: 500; font-size: 14px; }
+#TitleButton { background: transparent; color: #eee; border-radius: 4px; min-width: 30px; }
+#TitleButton:hover { background-color: #555; }
 """
 
 FRUTIGER_AERO_DARK_STYLE = """
@@ -119,6 +146,23 @@ QLabel, QCheckBox {
     font-size: 14px;
     font-weight: bold;
 }
+QDialog { background-color: #001a33; }
+#TitleBar {
+    background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 rgba(0, 31, 63, 0.9), stop:1 rgba(0, 15, 30, 1.0));
+    border-bottom: 2px solid #003366;
+}
+#TitleLabel { color: #80c4ff; font-weight: bold; font-size: 14px; }
+#TitleButton { 
+    background: transparent; 
+    border-radius: 4px; 
+    color: #80c4ff; 
+    font-weight: bold; 
+    font-size: 14px; 
+    min-width: 30px; 
+    padding: 4px;
+}
+#TitleButton:hover { background-color: rgba(128, 196, 255, 0.2); }
+#CloseButton:hover { background-color: #990000; color: white; }
 """
 
 THEMES = {

@@ -6,9 +6,9 @@ import zipfile
 from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, 
                              QPushButton, QLabel, QLineEdit, QTabWidget, QTextEdit, 
                              QFileDialog, QMessageBox, QListWidget, QComboBox, QColorDialog,
-                             QCheckBox)
-from PyQt6.QtCore import Qt, QTimer
-from PyQt6.QtGui import QPixmap, QImage, QKeySequence, QShortcut, QClipboard, QScreen, QIcon
+                             QCheckBox, QFrame)
+from PyQt6.QtCore import Qt, QTimer, QPoint
+from PyQt6.QtGui import QPixmap, QImage, QKeySequence, QShortcut, QClipboard, QScreen, QIcon, QMouseEvent
 from PIL import ImageQt, Image
 from qr_processor import QRProcessor
 from styles import THEMES
@@ -18,6 +18,74 @@ try:
     import pyi_splash
 except ImportError:
     pyi_splash = None
+
+class CustomTitleBar(QWidget):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setObjectName("TitleBar")
+        self.setFixedHeight(45)
+        self.parent = parent
+        self.layout = QHBoxLayout(self)
+        self.layout.setContentsMargins(15, 0, 5, 0)
+        
+        self.icon_label = QLabel()
+        self.icon_label.setFixedSize(24, 24)
+        self.icon_label.setScaledContents(True)
+        # Try to set icon if exists
+        icon_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "statics", "icon.ico")
+        if os.path.exists(icon_path):
+            self.icon_label.setPixmap(QIcon(icon_path).pixmap(24, 24))
+            
+        self.title_label = QLabel("AnyQR")
+        self.title_label.setObjectName("TitleLabel")
+        
+        self.layout.addWidget(self.icon_label)
+        self.layout.addWidget(self.title_label)
+        self.layout.addStretch()
+        
+        self.btn_min = QPushButton("－")
+        self.btn_min.setObjectName("TitleButton")
+        self.btn_min.clicked.connect(self.parent.showMinimized)
+        
+        self.btn_max = QPushButton("▢")
+        self.btn_max.setObjectName("TitleButton")
+        self.btn_max.clicked.connect(self.toggle_maximize)
+        
+        self.btn_close = QPushButton("✕")
+        self.btn_close.setObjectName("CloseButton")
+        self.btn_close.setProperty("class", "TitleButton") # for secondary styling if needed
+        self.btn_close.setStyleSheet("QPushButton { background: transparent; border-radius: 4px; color: inherit; font-weight: bold; font-size: 14px; min-width: 40px; padding: 4px; }")
+        self.btn_close.setObjectName("CloseButton")
+        # Wait, I already have style for #CloseButton in styles.py, but need to ensure it's themed
+        self.btn_close.clicked.connect(self.parent.close)
+        
+        self.layout.addWidget(self.btn_min)
+        self.layout.addWidget(self.btn_max)
+        self.layout.addWidget(self.btn_close)
+
+        self.start_pos = None
+
+    def toggle_maximize(self):
+        if self.parent.isMaximized():
+            self.parent.showNormal()
+            self.btn_max.setText("▢")
+        else:
+            self.parent.showMaximized()
+            self.btn_max.setText("❐")
+
+    def mousePressEvent(self, event):
+        if event.button() == Qt.MouseButton.LeftButton:
+            self.start_pos = event.globalPosition().toPoint() - self.parent.frameGeometry().topLeft()
+            event.accept()
+
+    def mouseMoveEvent(self, event):
+        if self.start_pos:
+            self.parent.move(event.globalPosition().toPoint() - self.start_pos)
+            event.accept()
+
+    def mouseReleaseEvent(self, event):
+        self.start_pos = None
+        event.accept()
 
 class DropLabel(QLabel):
     def __init__(self, parent=None):
@@ -62,6 +130,9 @@ class DropLabel(QLabel):
 class AnyQRApp(QMainWindow):
     def __init__(self):
         super().__init__()
+        self.setWindowFlags(Qt.WindowType.FramelessWindowHint)
+        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
+        
         self.setup_ui()
         
         # Set Window Icon
@@ -82,13 +153,24 @@ class AnyQRApp(QMainWindow):
         self.current_theme = "Frutiger Aero"
         self.history = []
 
-        self.resize(850, 650)
+        self.resize(900, 700)
         self.central_widget = QWidget()
+        self.central_widget.setObjectName("CentralWidget")
         self.setCentralWidget(self.central_widget)
         self.layout = QVBoxLayout(self.central_widget)
+        self.layout.setContentsMargins(0, 0, 0, 0)
+        self.layout.setSpacing(0)
+
+        # Custom Title Bar
+        self.title_bar = CustomTitleBar(self)
+        self.layout.addWidget(self.title_bar)
+        
+        self.content_widget = QWidget()
+        self.content_layout = QVBoxLayout(self.content_widget)
+        self.layout.addWidget(self.content_widget)
 
         self.tabs = QTabWidget()
-        self.layout.addWidget(self.tabs)
+        self.content_layout.addWidget(self.tabs)
 
         self.setup_scan_tab()
         self.setup_generate_tab()
@@ -277,6 +359,7 @@ class AnyQRApp(QMainWindow):
     def update_texts(self):
         t = self.t
         self.setWindowTitle(t["app_title"])
+        self.title_bar.title_label.setText(t["app_title"])
         self.tabs.setTabText(0, t["tab_scan"])
         self.tabs.setTabText(1, t["tab_gen"])
         self.tabs.setTabText(2, t["tab_batch"])
@@ -314,7 +397,7 @@ class AnyQRApp(QMainWindow):
     def choose_fg_color(self):
         color = QColorDialog.getColor(
             initial=Qt.GlobalColor.black,
-            options=QColorDialog.ColorDialogOption.ShowAlphaChannel
+            options=QColorDialog.ColorDialogOption.ShowAlphaChannel | QColorDialog.ColorDialogOption.DontUseNativeDialog
         )
         if color.isValid():
             self.fill_color = color.getRgb() # Returns (r, g, b, a)
@@ -323,7 +406,7 @@ class AnyQRApp(QMainWindow):
     def choose_bg_color(self):
         color = QColorDialog.getColor(
             initial=Qt.GlobalColor.white,
-            options=QColorDialog.ColorDialogOption.ShowAlphaChannel
+            options=QColorDialog.ColorDialogOption.ShowAlphaChannel | QColorDialog.ColorDialogOption.DontUseNativeDialog
         )
         if color.isValid():
             self.back_color = color.getRgb()
@@ -344,7 +427,7 @@ class AnyQRApp(QMainWindow):
             QMessageBox.information(self, self.t["no_image_title"], self.t["no_image_msg"])
 
     def load_file_dialog(self):
-        file_path, _ = QFileDialog.getOpenFileName(self, "Open Image File", "", "Images (*.png *.jpg *.jpeg *.bmp *.gif)")
+        file_path, _ = QFileDialog.getOpenFileName(self, "Open Image File", "", "Images (*.png *.jpg *.jpeg *.bmp *.gif)", options=QFileDialog.Option.DontUseNativeDialog)
         if file_path:
             self.process_image_file(file_path)
 
@@ -437,7 +520,7 @@ class AnyQRApp(QMainWindow):
         
         t = self.t
         t = self.t
-        file_path, _ = QFileDialog.getSaveFileName(self, t["btn_save_qr"], "qrcode.png", "PNG Image (*.png);;SVG Vector (*.svg);;All Files (*)")
+        file_path, _ = QFileDialog.getSaveFileName(self, t["btn_save_qr"], "qrcode.png", "PNG Image (*.png);;SVG Vector (*.svg);;All Files (*)", options=QFileDialog.Option.DontUseNativeDialog)
         if file_path:
             if file_path.lower().endswith('.svg'):
                 svg_data = QRProcessor.generate_qr_svg(self.gen_input.text().strip())
@@ -459,7 +542,7 @@ class AnyQRApp(QMainWindow):
             QMessageBox.warning(self, t["input_required_title"], t["batch_empty_msg"])
             return
 
-        file_path, _ = QFileDialog.getSaveFileName(self, t["btn_batch_gen"], "batch_qrcodes.zip", t["save_zip_filter"])
+        file_path, _ = QFileDialog.getSaveFileName(self, t["btn_batch_gen"], "batch_qrcodes.zip", t["save_zip_filter"], options=QFileDialog.Option.DontUseNativeDialog)
         if not file_path:
             return
 
@@ -493,7 +576,7 @@ class AnyQRApp(QMainWindow):
             QMessageBox.information(self, t["empty_hist_title"], t["empty_hist_msg"])
             return
 
-        file_path, _ = QFileDialog.getSaveFileName(self, t["btn_export_hist"], "qr_history.txt", "Text Files (*.txt);;All Files (*)")
+        file_path, _ = QFileDialog.getSaveFileName(self, t["btn_export_hist"], "qr_history.txt", "Text Files (*.txt);;All Files (*)", options=QFileDialog.Option.DontUseNativeDialog)
         if file_path:
             with open(file_path, 'w', encoding='utf-8') as f:
                 for item in self.history:
