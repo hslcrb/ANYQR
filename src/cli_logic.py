@@ -9,7 +9,7 @@ from PIL import Image
 from qr_processor import QRProcessor
 
 LONG_HELP = """
-AnyQR Advanced CLI - Version 1.7.2
+AnyQR Advanced CLI - Version 1.7.3
 ==================================
 
 Powerful QR code generation and scanning with full GUI/CLI parity.
