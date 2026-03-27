@@ -1,7 +1,10 @@
 FRUTIGER_AERO_STYLE = """
-QMainWindow {
+#CentralWidget {
     background: qlineargradient(x1: 0, y1: 0, x2: 1, y2: 1, stop: 0 #d4f0ff, stop: 1 #ffffff);
+    border: 1px solid #005a96;
+    border-radius: 10px;
 }
+QMainWindow { background: transparent; }
 QTabWidget::pane {
     border: 1px solid #78c5ef;
     background: rgba(255, 255, 255, 0.7);
@@ -67,7 +70,8 @@ QDialog { background-color: #d4f0ff; }
 """
 
 LIGHT_MINIMAL_STYLE = """
-QMainWindow { background-color: #f9f9f9; }
+#CentralWidget { background-color: #f9f9f9; border: 1px solid #ccc; border-radius: 8px; }
+QMainWindow { background: transparent; }
 QTabWidget::pane { border: 1px solid #e0e0e0; background-color: white; border-radius: 8px; }
 QTabBar::tab { background: transparent; padding: 10px 20px; color: #555; font-weight: 500;}
 QTabBar::tab:selected { background: white; border-bottom: 2px solid #007aff; color: #007aff; font-weight: bold; }
@@ -83,7 +87,8 @@ QDialog { background-color: #f9f9f9; }
 """
 
 DARK_MINIMAL_STYLE = """
-QMainWindow { background-color: #1e1e1e; }
+#CentralWidget { background-color: #1e1e1e; border: 1px solid #444; border-radius: 8px; }
+QMainWindow { background: transparent; }
 QTabWidget::pane { border: 1px solid #333; background-color: #252526; border-radius: 8px; }
 QTabBar::tab { background: transparent; padding: 10px 20px; color: #ccc; font-weight: 500;}
 QTabBar::tab:selected { background: #252526; border-bottom: 2px solid #007aff; color: #fff; font-weight: bold; }
@@ -99,9 +104,12 @@ QDialog { background-color: #1e1e1e; }
 """
 
 FRUTIGER_AERO_DARK_STYLE = """
-QMainWindow {
+#CentralWidget {
     background: qlineargradient(x1: 0, y1: 0, x2: 1, y2: 1, stop: 0 #001a33, stop: 1 #003366);
+    border: 1px solid #004d80;
+    border-radius: 10px;
 }
+QMainWindow { background: transparent; }
 QTabWidget::pane {
     border: 1px solid #1a4d80;
     background: rgba(0, 26, 51, 0.7);

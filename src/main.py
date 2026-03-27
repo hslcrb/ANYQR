@@ -56,7 +56,6 @@ class CustomTitleBar(QWidget):
         self.btn_close.setProperty("class", "TitleButton") # for secondary styling if needed
         self.btn_close.setStyleSheet("QPushButton { background: transparent; border-radius: 4px; color: inherit; font-weight: bold; font-size: 14px; min-width: 40px; padding: 4px; }")
         self.btn_close.setObjectName("CloseButton")
-        # Wait, I already have style for #CloseButton in styles.py, but need to ensure it's themed
         self.btn_close.clicked.connect(self.parent.close)
         
         self.layout.addWidget(self.btn_min)
@@ -64,6 +63,7 @@ class CustomTitleBar(QWidget):
         self.layout.addWidget(self.btn_close)
 
         self.start_pos = None
+        self.is_moving = False
 
     def toggle_maximize(self):
         if self.parent.isMaximized():
@@ -75,16 +75,17 @@ class CustomTitleBar(QWidget):
 
     def mousePressEvent(self, event):
         if event.button() == Qt.MouseButton.LeftButton:
+            self.is_moving = True
             self.start_pos = event.globalPosition().toPoint() - self.parent.frameGeometry().topLeft()
             event.accept()
 
     def mouseMoveEvent(self, event):
-        if self.start_pos:
+        if self.is_moving and self.start_pos:
             self.parent.move(event.globalPosition().toPoint() - self.start_pos)
             event.accept()
 
     def mouseReleaseEvent(self, event):
-        self.start_pos = None
+        self.is_moving = False
         event.accept()
 
 class DropLabel(QLabel):
@@ -130,7 +131,7 @@ class DropLabel(QLabel):
 class AnyQRApp(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowFlags(Qt.WindowType.FramelessWindowHint)
+        self.setWindowFlags(Qt.WindowType.FramelessWindowHint | Qt.WindowType.Window)
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
         
         self.setup_ui()
